@@ -27,11 +27,16 @@ class EELLLTXT_Server
   val conf = ConfigFactory.parseString("pekko.http.server.preview.enable-http2 = on")
     .withFallback(ConfigFactory.defaultApplication())
 
-  val classicServerSystem = ClassicSystem("TCodeServerSystem", conf)
-  val serverSystem: ActorSystem[_] = classicServerSystem.toTyped
-  val bound = new TCodeServer(serverSystem).run()
+  val testKit = ActorTestKit(conf)
 
-  bound.futureValue
+  val serverSystem: ActorSystem[_] = testKit.system
+
+  val engine = TCodeServer.createEngine()
+  val engineActor = testKit.spawn(TCodeEngineActor(engine), "EngineActor")
+
+  val serverBootstrap = new TCodeServer(serverSystem, engineActor)
+  val bound = serverBootstrap.run().futureValue
+
 
   serverSystem.log
 
@@ -44,7 +49,6 @@ class EELLLTXT_Server
 
   override def afterAll(): Unit = {
     ActorTestKit.shutdown(clientSystem)
-    classicServerSystem.terminate()
   }
 
   for(lesson <- EELLLTXT.lessons){

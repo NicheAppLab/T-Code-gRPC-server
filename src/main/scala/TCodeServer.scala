@@ -1,102 +1,61 @@
 package io.github.nicheapplab.tcodeserver
 
-//#import
-
-
-import java.security.KeyStore
-import java.security.SecureRandom
-import java.security.cert.Certificate
-import java.security.cert.CertificateFactory
-
-import scala.io.Source
-
 import org.apache.pekko
-import pekko.actor.typed.ActorSystem
+import pekko.actor.typed.{ ActorSystem, ActorRef, Behavior}
 import pekko.actor.typed.scaladsl.Behaviors
 import pekko.http.scaladsl.ConnectionContext
+import pekko.grpc.scaladsl.ServiceHandler
 import pekko.http.scaladsl.Http
-import pekko.http.scaladsl.HttpsConnectionContext
-import pekko.http.scaladsl.model.HttpRequest
-import pekko.http.scaladsl.model.HttpResponse
-import pekko.pki.pem.DERPrivateKeyLoader
-import pekko.pki.pem.PEMDecoder
-import com.typesafe.config.ConfigFactory
-import javax.net.ssl.KeyManagerFactory
-import javax.net.ssl.SSLContext
-
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
-import scala.util.Failure
-import scala.util.Success
 import scala.concurrent.duration._
-//#import
+import io.github.nicheapplab.tcodeengine._
 
-
-//#server
 object TCodeServer {
+
+  def createEngine(): SQLiteInteractiveEngine = {
+    val tcode_tbl_path = System.getProperty("java.io.tempdir") ++ "/.t-code-engine/tcode_tbl.db"
+    val mazegaki_path = System.getProperty("java.io.tempdir") ++ "/.t-code-engine/mazegaki.db"
+    val bushu_path = System.getProperty("java.io.tempdir") ++ "/.t-code-engine/bushu.db"
+    val jdbc_prefix = "jdbc:sqlite"
+
+    new SQLiteInteractiveEngine(jdbc_prefix, tcode_tbl_path, mazegaki_path, bushu_path) with QwertyLayout
+  }
+
   def main(args: Array[String]): Unit = {
-    // important to enable HTTP/2 in ActorSystem's config
-    val conf = ConfigFactory.parseString("pekko.http.server.preview.enable-http2 = on")
-      .withFallback(ConfigFactory.defaultApplication())
-    val system = ActorSystem[Nothing](Behaviors.empty[Nothing], "TCodeServer", conf)
-    new TCodeServer(system).run()
+    ActorSystem[Nothing](Behaviors.setup[Nothing] { context =>
+      val engine = createEngine()
+      val engineActorRef = context.spawn(TCodeEngineActor(engine), "EngineActor")
+
+      val serverBootstrap = new TCodeServer(context.system, engineActorRef)
+      serverBootstrap.run()
+
+      Behaviors.empty
+    }, "TCodeSystem")
   }
 }
 
-class TCodeServer(system: ActorSystem[_]) {
+class TCodeServer(system: ActorSystem[_], engineActorRef: ActorRef[TCodeEngineCommand]) {
 
   def run(): Future[Http.ServerBinding] = {
-    implicit val sys = system
+    implicit val sys: ActorSystem[_] = system
     implicit val ec: ExecutionContext = system.executionContext
 
-    val service: HttpRequest => Future[HttpResponse] =
-      TCodeServiceHandler(new TCodeServiceImpl(system))
+    val serviceImpl = new TCodeServiceImpl(engineActorRef)
+    val serviceHandler = TCodeServiceHandler(serviceImpl)
 
-    val bound: Future[Http.ServerBinding] = Http()(system)
-      .newServerAt(interface = "127.0.0.1", port = 8080)
-      .bind(service)
-      .map(_.addToCoordinatedShutdown(hardTerminationDeadline = 10.seconds))
+    val binding = Http()
+      .newServerAt("localhost", 8080)
+      .bind(serviceHandler)
 
-    bound.onComplete {
-      case Success(binding) =>
-        val address = binding.localAddress
-        println(s"gRPC server bound to ${address.getHostString}:${address.getPort}")
-      case Failure(ex) =>
-        println("Failed to bind gRPC endpoint, terminating system")
-        ex.printStackTrace()
+    binding.onComplete {
+      case scala.util.Success(bound) =>
+        system.log.info(s"TCodeServer online at http://${bound.localAddress.getHostString}:${bound.localAddress.getPort}/")
+      case scala.util.Failure(e) =>
+        system.log.error("Failed to bind HTTP endpoint, terminating system", e)
         system.terminate()
     }
 
-    bound
+    binding
   }
-  //#server
-
-
-  // private def serverHttpContext: HttpsConnectionContext = {
-  //   val privateKey =
-  //     DERPrivateKeyLoader.load(PEMDecoder.decode(readPrivateKeyPem()))
-  //   val fact = CertificateFactory.getInstance("X.509")
-  //   val cer = fact.generateCertificate(
-  //     classOf[TCodeServer].getResourceAsStream("/certs/server1.pem")
-  //   )
-  //   val ks = KeyStore.getInstance("PKCS12")
-  //   ks.load(null)
-  //   ks.setKeyEntry(
-  //     "private",
-  //     privateKey,
-  //     new Array[Char](0),
-  //     Array[Certificate](cer)
-  //   )
-  //   val keyManagerFactory = KeyManagerFactory.getInstance("SunX509")
-  //   keyManagerFactory.init(ks, null)
-  //   val context = SSLContext.getInstance("TLS")
-  //   context.init(keyManagerFactory.getKeyManagers, null, new SecureRandom)
-  //   ConnectionContext.httpsServer(context)
-  // }
-
-  // private def readPrivateKeyPem(): String =
-  //   Source.fromResource("certs/server1.key").mkString
-  // //#server
-
 }
-//#server
