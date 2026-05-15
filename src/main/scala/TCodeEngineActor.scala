@@ -1,91 +1,73 @@
 package io.github.nicheapplab.tcodeserver
 
-import org.apache.pekko.actor.{Actor, Props}
+import org.apache.pekko
+import pekko.actor.typed.scaladsl.Behaviors
+import pekko.actor.typed.scaladsl.LoggerOps
+import pekko.actor.typed.{ ActorRef, ActorSystem, Behavior }
 
 import io.github.nicheapplab.tcodeengine._
 
-object TCodeEngineActor{
-  case class Put(char: String)
-  case object GetStatus
-  case class Status(
-    outputBuffer: String,
-    buffer: String,
-    candidates: IndexedSeq[String],
-    lastCharAsKey: String
-  )
-  case object Left
-  case object Right
-  case object Convert
-  case class Select(n: Int)
-  case object Commit
-  case object Backspace
-  case object GetOutput
-  case class Output(str: String)
-  case object Reset
+sealed trait TCodeEngineCommand
+final case class Put(char: String, replyTo: ActorRef[TCodeEngineResponse]) extends TCodeEngineCommand
+case class Left(replyTo: ActorRef[TCodeEngineResponse]) extends TCodeEngineCommand
+case class Right(replyTo: ActorRef[TCodeEngineResponse] ) extends TCodeEngineCommand
+case class Convert(replyTo: ActorRef[TCodeEngineResponse]) extends TCodeEngineCommand
+case class Select(n: Int, replyTo: ActorRef[TCodeEngineResponse]) extends TCodeEngineCommand
+case class Commit(replyTo: ActorRef[TCodeEngineResponse]) extends TCodeEngineCommand
+case class Backspace(replyTo: ActorRef[TCodeEngineResponse]) extends TCodeEngineCommand
+case class Reset(replyTo: ActorRef[TCodeEngineResponse]) extends TCodeEngineCommand
 
-  def props(
-    jdbc_prefix: String,
-    tcode_tbl_path: String,
-    mazegaki_path: String,
-    bushu_path: String
-  ) = Props(
-    new TCodeEngineActor(
-      jdbc_prefix: String,
-      tcode_tbl_path: String,
-      mazegaki_path: String,
-      bushu_path: String
-    )
-  )
-}
-class TCodeEngineActor(
-      jdbc_prefix: String,
-      tcode_tbl_path: String,
-      mazegaki_path: String,
-      bushu_path: String
-) extends Actor {
-  import TCodeEngineActor._
+sealed trait TCodeEngineResponse
+final case class Status(
+  outputBuffer: String,
+  buffer: String,
+  candidates: IndexedSeq[String],
+  lastCharAsKey: String
+) extends TCodeEngineResponse
+final case class Output(str: String) extends TCodeEngineResponse
 
-  val engine = new SQLiteInteractiveEngine(
-    jdbc_prefix,
-    tcode_tbl_path,
-    mazegaki_path,
-    bushu_path
-  ) with QwertyLayout
 
-  def receive = {
-    case Put(c) =>
-      engine.put(c.head)
-      sender() ! getStatus
-    case Left =>
-      engine.inflexLeft()
-      sender() ! getStatus
-    case Right =>
-      engine.inflexRight()
-      sender() ! getStatus
-    case Reset =>
-      engine.reset()
-      sender() ! getStatus
-    case Convert =>
-      engine.convert()
-      sender() ! getStatus
-    case Select(n) =>
-      engine.selectCandidate(n)
-      sender() ! getStatus
-    case Commit =>
-      val str = engine.commit()
-      sender() ! Output(str)
-    case Backspace =>
-      engine.backspace()
-      sender() ! getStatus
-    case GetStatus =>
-      sender() ! getStatus
-  }
-
+class TCodeEngineActor(engine: SQLiteInteractiveEngine){
   def getStatus = Status(
     engine.outputBuffer.mkString,
     engine.buffer.mkString,
     engine.candidates.to(IndexedSeq),
     engine.lastCharAsKey.toString
   )
-
+  def createBehavior(): Behavior[TCodeEngineCommand] = Behaviors.setup { context =>
+    Behaviors.receiveMessage { message =>
+      message match{
+        case Put(c, replyTo) =>
+          engine.put(c.head)
+          replyTo ! getStatus
+        case Left(replyTo) =>
+          engine.inflexLeft()
+          replyTo ! getStatus
+        case Right(replyTo) =>
+          engine.inflexRight()
+          replyTo ! getStatus
+        case Convert(replyTo) =>
+          engine.convert()
+          replyTo ! getStatus
+        case Select(n, replyTo) =>
+          engine.selectCandidate(n)
+          replyTo ! getStatus
+        case Commit(replyTo) =>
+          val output = engine.commit()
+          replyTo ! Output(output)
+        case Backspace(replyTo) =>
+          engine.backspace()
+          replyTo ! getStatus
+        case Reset(replyTo) =>
+          engine.reset()
+          replyTo ! getStatus
+      }
+      Behaviors.same
+    }
+  }
+}
+object TCodeEngineActor{
+  def apply(engine: SQLiteInteractiveEngine): Behavior[TCodeEngineCommand] = {
+    new TCodeEngineActor(engine).createBehavior()
+  }
 }
