@@ -17,7 +17,8 @@ class TCodeServiceImpl(engineActor: ActorRef[TCodeEngineCommand])(implicit syste
       outputBuffer = status.outputBuffer,
       buffer = status.buffer,
       candidates = status.candidates,
-      lastCharAsKey = status.lastCharAsKey
+      lastCharAsKey = status.lastCharAsKey,
+      commandSucceed = status.commandSucceed
     )
   }
 

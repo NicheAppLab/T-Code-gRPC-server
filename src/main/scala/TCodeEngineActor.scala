@@ -22,45 +22,47 @@ final case class Status(
   outputBuffer: String,
   buffer: String,
   candidates: IndexedSeq[String],
-  lastCharAsKey: String
+  lastCharAsKey: String,
+  commandSucceed: Boolean
 ) extends TCodeEngineResponse
 final case class Output(str: String) extends TCodeEngineResponse
 
 
 class TCodeEngineActor(engine: SQLiteInteractiveEngine){
-  def getStatus = Status(
+  def getStatus(commandSucceed: Boolean) = Status(
     engine.outputBuffer.mkString,
     engine.buffer.mkString,
     engine.candidates.to(IndexedSeq),
-    engine.lastCharAsKey.toString
+    engine.lastCharAsKey.toString,
+    commandSucceed
   )
   def createBehavior(): Behavior[TCodeEngineCommand] = Behaviors.setup { context =>
     Behaviors.receiveMessage { message =>
       message match{
         case Put(c, replyTo) =>
           engine.put(c.head)
-          replyTo ! getStatus
+          replyTo ! getStatus(true)
         case Left(replyTo) =>
           engine.inflexLeft()
-          replyTo ! getStatus
+          replyTo ! getStatus(true)
         case Right(replyTo) =>
           engine.inflexRight()
-          replyTo ! getStatus
+          replyTo ! getStatus(true)
         case Convert(replyTo) =>
           engine.convert()
-          replyTo ! getStatus
+          replyTo ! getStatus(true)
         case Select(n, replyTo) =>
           engine.selectCandidate(n)
-          replyTo ! getStatus
+          replyTo ! getStatus(true)
         case Commit(replyTo) =>
           val output = engine.commit()
           replyTo ! Output(output)
         case Backspace(replyTo) =>
-          engine.backspace()
-          replyTo ! getStatus
+          val succeed = engine.backspace()
+          replyTo ! getStatus(succeed)
         case Reset(replyTo) =>
           engine.reset()
-          replyTo ! getStatus
+          replyTo ! getStatus(true)
       }
       Behaviors.same
     }

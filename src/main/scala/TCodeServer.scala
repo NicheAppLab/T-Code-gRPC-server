@@ -10,6 +10,7 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import io.github.nicheapplab.tcodeengine._
+import com.typesafe.config.ConfigFactory
 
 object TCodeServer {
 
@@ -23,6 +24,10 @@ object TCodeServer {
   }
 
   def main(args: Array[String]): Unit = {
+    val conf = ConfigFactory
+      .parseString("pekko.http.server.preview.enable-http2 = on")
+      .withFallback(ConfigFactory.defaultApplication())
+
     ActorSystem[Nothing](Behaviors.setup[Nothing] { context =>
       val engine = createEngine()
       val engineActorRef = context.spawn(TCodeEngineActor(engine), "EngineActor")
@@ -31,7 +36,7 @@ object TCodeServer {
       serverBootstrap.run()
 
       Behaviors.empty
-    }, "TCodeSystem")
+    }, "TCodeSystem", conf)
   }
 }
 

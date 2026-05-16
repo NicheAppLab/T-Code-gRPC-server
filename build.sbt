@@ -1,4 +1,4 @@
-name := "pekko-grpc-quickstart-scala"
+name := "tcodeserver"
 
 version := "1.0"
 
@@ -10,6 +10,8 @@ lazy val pekkoVersion = "1.4.0"
 lazy val pekkoGrpcVersion = "1.2.0"
 
 enablePlugins(PekkoGrpcPlugin)
+
+enablePlugins(JavaAppPackaging)
 
 // Run in a separate JVM, to make sure sbt waits until all threads have
 // finished before returning.
