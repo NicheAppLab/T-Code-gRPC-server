@@ -24,17 +24,27 @@ object TCodeServer {
   val conf = ConfigFactory.load()
 
   def createEngine(): SQLiteInteractiveEngine = {
-    import java.nio.file.Paths
-    val tcode_tbl_path = conf.getString("tcode-server.databases.tcode-tbl")
-    val mazegaki_path  = conf.getString("tcode-server.databases.mazegaki")
-    val bushu_path     = conf.getString("tcode-server.databases.bushu")
+    import java.nio.file.{ Paths, Files }
+    val tcode_tbl_path = Paths.get(conf.getString("tcode-server.databases.tcode-tbl"))
+    println(tcode_tbl_path)
+    val mazegaki_path = Paths.get(conf.getString("tcode-server.databases.mazegaki"))
+    val bushu_path = Paths.get(conf.getString("tcode-server.databases.bushu"))
+
+    val parentDir = tcode_tbl_path.getParent
+    if (parentDir != null) {
+      Files.createDirectories(parentDir)
+    }
     val jdbc_prefix = "jdbc:sqlite"
 
-    new SQLiteInteractiveEngine(jdbc_prefix, tcode_tbl_path, mazegaki_path, bushu_path) with QwertyLayout
+    new SQLiteInteractiveEngine(
+      jdbc_prefix,
+      tcode_tbl_path.toString,
+      mazegaki_path.toString,
+      bushu_path.toString
+    ) with QwertyLayout
   }
 
   def main(args: Array[String]): Unit = {
-
     ActorSystem[Nothing](Behaviors.setup[Nothing] { context =>
         val engine = createEngine()
         val engineActorRef = context.spawn(TCodeEngineActor(engine), "EngineActor")
@@ -48,7 +58,6 @@ object TCodeServer {
 }
 
 class TCodeServer(system: ActorSystem[_], engineActorRef: ActorRef[TCodeEngineCommand]) {
-
   def run(): Future[Http.ServerBinding] = {
     implicit val sys: ActorSystem[_] = system
     implicit val ec: ExecutionContext = system.executionContext

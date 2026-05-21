@@ -1,0 +1,23 @@
+<configuration>
+    <!-- Standard Console Appender for sbt test stream -->
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%date{HH:mm:ss.SSS} %-5level [%X{sourceThread}] %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- 1. Capture Pekko gRPC framework details -->
+    <logger name="org.apache.pekko.grpc" level="DEBUG"/>
+
+    <!-- 2. Capture HTTP2 frame exchanges, headers, and SSL errors -->
+    <logger name="org.apache.pekko.http" level="WARN"/>
+
+    <!-- 3. Capture IO engine connection handshakes and wire resets -->
+    <logger name="io.grpc.netty" level="WARN"/>
+    <logger name="org.apache.pekko.remote" level="WARN"/>
+
+    <!-- Keep root at INFO so your screen isn't overwhelmed by standard actor lifecycles -->
+    <root level="INFO">
+        <appender-ref ref="STDOUT"/>
+    </root>
+</configuration>
