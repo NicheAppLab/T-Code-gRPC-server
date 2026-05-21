@@ -208,7 +208,7 @@ object EELLLTXT {
         "あちこちでこどもたちが、たいくつそうにしています。",
         "「いつ、もどりますか。」",
         "「そのうちもどるだろう。」"
-     ),
+      ),
       Array(
         "iakslghdhfia/amd,fhfia.dhfialahfiajaydhf",
         ",flgys/ajd.dmdjcjd/ajrjaiajd/ajc.d.dyf;ahf",
@@ -221,7 +221,7 @@ object EELLLTXT {
         "yf/auf/ahgufkqiaks/a;sjdkshdjt.d;bydkgjslahdmd,fhf",
         ",ghd.djdiakqjcmd,fjehfjv",
         ",g;bkdyd/aiakq;ahcpsydhfjv"
-     ),
+      )
     ),
     LessonData(
       "14",

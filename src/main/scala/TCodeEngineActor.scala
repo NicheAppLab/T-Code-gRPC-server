@@ -10,7 +10,7 @@ import io.github.nicheapplab.tcodeengine._
 sealed trait TCodeEngineCommand
 final case class Put(char: String, replyTo: ActorRef[TCodeEngineResponse]) extends TCodeEngineCommand
 case class Left(replyTo: ActorRef[TCodeEngineResponse]) extends TCodeEngineCommand
-case class Right(replyTo: ActorRef[TCodeEngineResponse] ) extends TCodeEngineCommand
+case class Right(replyTo: ActorRef[TCodeEngineResponse]) extends TCodeEngineCommand
 case class Convert(replyTo: ActorRef[TCodeEngineResponse]) extends TCodeEngineCommand
 case class Select(n: Int, replyTo: ActorRef[TCodeEngineResponse]) extends TCodeEngineCommand
 case class Commit(replyTo: ActorRef[TCodeEngineResponse]) extends TCodeEngineCommand
@@ -19,16 +19,15 @@ case class Reset(replyTo: ActorRef[TCodeEngineResponse]) extends TCodeEngineComm
 
 sealed trait TCodeEngineResponse
 final case class Status(
-  outputBuffer: String,
-  buffer: String,
-  candidates: IndexedSeq[String],
-  lastCharAsKey: String,
-  commandSucceed: Boolean
+    outputBuffer: String,
+    buffer: String,
+    candidates: IndexedSeq[String],
+    lastCharAsKey: String,
+    commandSucceed: Boolean
 ) extends TCodeEngineResponse
 final case class Output(str: String) extends TCodeEngineResponse
 
-
-class TCodeEngineActor(engine: SQLiteInteractiveEngine){
+class TCodeEngineActor(engine: SQLiteInteractiveEngine) {
   def getStatus(commandSucceed: Boolean) = Status(
     engine.outputBuffer.mkString,
     engine.buffer.mkString,
@@ -38,7 +37,7 @@ class TCodeEngineActor(engine: SQLiteInteractiveEngine){
   )
   def createBehavior(): Behavior[TCodeEngineCommand] = Behaviors.setup { context =>
     Behaviors.receiveMessage { message =>
-      message match{
+      message match {
         case Put(c, replyTo) =>
           engine.put(c.head)
           replyTo ! getStatus(true)
@@ -68,7 +67,7 @@ class TCodeEngineActor(engine: SQLiteInteractiveEngine){
     }
   }
 }
-object TCodeEngineActor{
+object TCodeEngineActor {
   def apply(engine: SQLiteInteractiveEngine): Behavior[TCodeEngineCommand] = {
     new TCodeEngineActor(engine).createBehavior()
   }

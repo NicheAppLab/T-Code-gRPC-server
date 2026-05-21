@@ -9,7 +9,8 @@ import org.apache.pekko.util.Timeout
 import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class TCodeServiceImpl(engineActor: ActorRef[TCodeEngineCommand])(implicit system: ActorSystem[_]) extends TCodeService {
+class TCodeServiceImpl(engineActor: ActorRef[TCodeEngineCommand])(
+    implicit system: ActorSystem[_]) extends TCodeService {
   private implicit val timeout: Timeout = Timeout(5.seconds)
 
   private def toBufferStatusResponse(status: Status): BufferStatusResponse = {
