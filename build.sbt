@@ -36,3 +36,6 @@ libraryDependencies ++= Seq(
   "org.scalatest" %% "scalatest" % "3.2.19" % Test,
   "org.scalameta" %% "munit" % "1.0.4" % Test
 )
+
+Test / parallelExecution := false
+Test / logBuffered := false
