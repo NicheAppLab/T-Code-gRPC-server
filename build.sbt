@@ -1,4 +1,4 @@
-name := "pekko-grpc-quickstart-scala"
+name := "tcodeserver"
 
 version := "1.0"
 
@@ -7,9 +7,12 @@ scalaVersion := "3.3.6"
 scalacOptions ++= Seq("-deprecation")
 
 lazy val pekkoVersion = "1.4.0"
+lazy val pekkoHttpVersion = "1.3.0"
 lazy val pekkoGrpcVersion = "1.2.0"
 
 enablePlugins(PekkoGrpcPlugin)
+
+enablePlugins(JavaAppPackaging)
 
 // Run in a separate JVM, to make sure sbt waits until all threads have
 // finished before returning.
@@ -23,6 +26,8 @@ libraryDependencies ++= Seq(
   "org.apache.pekko" %% "pekko-stream" % pekkoVersion,
   "org.apache.pekko" %% "pekko-discovery" % pekkoVersion,
   "org.apache.pekko" %% "pekko-pki" % pekkoVersion,
+  "org.apache.pekko" %% "pekko-http" % pekkoHttpVersion,
+  "org.apache.pekko" %% "pekko-http-cors" % pekkoHttpVersion,
 
   "ch.qos.logback" % "logback-classic" % "1.3.15",
 

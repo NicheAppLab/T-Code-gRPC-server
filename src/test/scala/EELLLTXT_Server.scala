@@ -3,12 +3,12 @@ package io.github.nicheapplab.tcodeserver
 import org.apache.pekko
 import pekko.actor.testkit.typed.scaladsl.ActorTestKit
 import pekko.actor.typed.ActorSystem
-import pekko.actor.{ActorSystem => ClassicSystem}
+import pekko.actor.{ ActorSystem => ClassicSystem }
 import pekko.actor.typed.scaladsl.adapter._
 import pekko.actor.typed.scaladsl.Behaviors
 import pekko.grpc.GrpcClientSettings
 
-import scala.concurrent.{ ExecutionContext, Future, Await}
+import scala.concurrent.{ Await, ExecutionContext, Future }
 import scala.concurrent.duration._
 import scala.util.{ Failure, Success }
 import com.typesafe.config.ConfigFactory
@@ -24,10 +24,18 @@ class EELLLTXT_Server
     with Matchers
     with ScalaFutures {
   implicit val patience: PatienceConfig = PatienceConfig(scaled(5.seconds), scaled(100.millis))
-  val conf = ConfigFactory.parseString("pekko.http.server.preview.enable-http2 = on")
-    .withFallback(ConfigFactory.defaultApplication())
 
-  val testKit = ActorTestKit(conf)
+  val mandatoryTestConfig = ConfigFactory.parseString("""
+  pekko.http.server.preview.enable-http2 = on
+  tcode-server.host = "127.0.0.1"
+  tcode-server.port = 57001
+""").withFallback(ConfigFactory.load()) // Load fallback reference structures
+    .resolve()
+
+  val configHost = mandatoryTestConfig.getString("tcode-server.host")
+  val configPort = mandatoryTestConfig.getInt("tcode-server.port")
+
+  val testKit = ActorTestKit(mandatoryTestConfig)
 
   val serverSystem: ActorSystem[_] = testKit.system
 
@@ -37,13 +45,12 @@ class EELLLTXT_Server
   val serverBootstrap = new TCodeServer(serverSystem, engineActor)
   val bound = serverBootstrap.run().futureValue
 
-
   serverSystem.log
 
-  implicit val clientSystem: ActorSystem[_] = ActorSystem(Behaviors.empty, "TCodeClient")
+  implicit val clientSystem: ActorSystem[_] = serverSystem
   val settings = GrpcClientSettings
-  .connectToServiceAt("localhost", 8080)(clientSystem)
-  .withTls(false)
+    .connectToServiceAt(configHost, configPort)(clientSystem)
+    .withTls(false)
 
   val client = TCodeServiceClient(settings)
 
@@ -51,10 +58,10 @@ class EELLLTXT_Server
     ActorTestKit.shutdown(clientSystem)
   }
 
-  for(lesson <- EELLLTXT.lessons){
+  for (lesson <- EELLLTXT.lessons) {
     "TCodeEngineService" should {
       lesson.name in {
-        lesson.strokes(0).foreach{ c =>
+        lesson.strokes(0).foreach { c =>
           client.put(PutRequest(c.toString)).futureValue
         }
 

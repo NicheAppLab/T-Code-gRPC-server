@@ -3,12 +3,12 @@ package io.github.nicheapplab.tcodeserver
 import org.apache.pekko
 import pekko.actor.testkit.typed.scaladsl.ActorTestKit
 import pekko.actor.typed.ActorSystem
-import pekko.actor.{ActorSystem => ClassicSystem}
+import pekko.actor.{ ActorSystem => ClassicSystem }
 import pekko.actor.typed.scaladsl.adapter._
 import pekko.actor.typed.scaladsl.Behaviors
 import pekko.grpc.GrpcClientSettings
 
-import scala.concurrent.{ ExecutionContext, Future, Await}
+import scala.concurrent.{ Await, ExecutionContext, Future }
 import scala.concurrent.duration._
 import scala.util.{ Failure, Success }
 import com.typesafe.config.ConfigFactory
@@ -35,7 +35,6 @@ class EELLLTXT_ServiceImpl
     new SQLiteInteractiveEngine(jdbc_prefix, tcode_tbl_path, mazegaki_path, bushu_path) with QwertyLayout
   }
 
-
   implicit val patience: PatienceConfig = PatienceConfig(scaled(5.seconds), scaled(100.millis))
 
   val testKit = ActorTestKit()
@@ -45,12 +44,11 @@ class EELLLTXT_ServiceImpl
   val engineActor = system.systemActorOf(TCodeEngineActor(engine), "EngineActor")
   val serviceImpl = new TCodeServiceImpl(engineActor)(system)
 
-
   override def afterAll(): Unit = {
     testKit.shutdownTestKit()
   }
 
-  for(lesson <- EELLLTXT.lessons){
+  for (lesson <- EELLLTXT.lessons) {
     "TCodeEngineService" should {
       lesson.name in {
         lesson.strokes(0).foreach(c => serviceImpl.put(PutRequest(c.toString)))
