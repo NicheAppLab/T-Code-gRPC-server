@@ -2,9 +2,12 @@
 *.tasty
 *.log
 .bloop/
+.bsp/
 .metals/
 null/
 project/project/
+project/.bloop/
+project/metals.sbt
 target/
 
 # virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml

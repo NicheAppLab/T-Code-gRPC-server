@@ -9,6 +9,7 @@ scalacOptions ++= Seq("-deprecation")
 lazy val pekkoVersion = "1.4.0"
 lazy val pekkoHttpVersion = "1.3.0"
 lazy val pekkoGrpcVersion = "1.2.0"
+lazy val jsoniterVersion = "2.38.10"
 
 enablePlugins(PekkoGrpcPlugin)
 
@@ -30,6 +31,11 @@ libraryDependencies ++= Seq(
   "org.apache.pekko" %% "pekko-http-cors" % pekkoHttpVersion,
 
   "ch.qos.logback" % "logback-classic" % "1.3.15",
+
+  "com.github.pjfanning" %% "pekko-http-jsoniter-scala" % "3.6.0",
+  "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-core" % jsoniterVersion,
+  // The macro tool runs exclusively inside the compiler and is excluded from the final JAR footprint!
+  "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-macros" % jsoniterVersion % Provided,
 
   "org.apache.pekko" %% "pekko-actor-testkit-typed" % pekkoVersion % Test,
   "org.apache.pekko" %% "pekko-stream-testkit" % pekkoVersion % Test,
